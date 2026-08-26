@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 150" width="500" height="150">
+<title>RevenuePilot logo</title>
+<rect x="60" y="35" width="90" height="90" rx="20" fill="#0a0a0a"/>
+<rect x="80" y="92" width="12" height="18" rx="2" fill="#f472b6"/>
+<rect x="98" y="80" width="12" height="30" rx="2" fill="#ec4899"/>
+<rect x="116" y="64" width="12" height="46" rx="2" fill="#dc2626"/>
+<path d="M120 62 L138 44 L138 56 L150 56 L150 68 L128 68 Z" fill="#ef4444"/>
+<text x="185" y="100" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#0a0a0a">Revenue<tspan fill="#dc2626">Pilot</tspan></text>
+</svg>
