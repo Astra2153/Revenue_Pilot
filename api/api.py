@@ -56,9 +56,29 @@ app.add_middleware(
 # Simple in-process cache: reload data + refit models at most once per
 # CACHE_TTL_SECONDS, instead of hitting Supabase and refitting sklearn
 # models on every single request.
+#
+# Guarded by a lock (double-checked locking): get_data() runs as a plain
+# `def`, so FastAPI executes it on a thread-pool thread, and multiple
+# requests can genuinely run concurrently. Without a lock, several
+# requests arriving right as the cache expires would each independently
+# see it as stale and each independently reload from Supabase and refit
+# two RandomForests plus a KMeans model AT THE SAME TIME -- multiple
+# full copies of every DataFrame and model in memory simultaneously.
+# That is a real memory spike under heavy traffic, not a leak, and it
+# is exactly the kind of "spike in incoming traffic" a hosting
+# platform's memory-limit warning points at. The lock makes only the
+# first thread past the check do the expensive work; everyone else
+# either reuses what it just built or serves the still-valid cache.
+#
+# TTL raised from 5 to 30 minutes: this demo's underlying data does not
+# change minute to minute, so refitting two RandomForests and a KMeans
+# model every 5 minutes bought nothing but memory pressure.
 # ------------------------------------------------------------------
-CACHE_TTL_SECONDS = 300
+import threading
+
+CACHE_TTL_SECONDS = 1800
 _cache = {"loaded_at": None, "data": None}
+_cache_lock = threading.Lock()
 
 
 def get_data():
@@ -66,55 +86,62 @@ def get_data():
     if _cache["loaded_at"] and (now - _cache["loaded_at"]).total_seconds() < CACHE_TTL_SECONDS:
         return _cache["data"]
 
-    customers = db.load_customers()
-    sales = db.load_sales()
-    marketing = db.load_marketing()
-    finance = db.load_finance()
+    with _cache_lock:
+        # Re-check inside the lock: another thread may have just finished
+        # rebuilding the cache while this thread was waiting to acquire it.
+        now = datetime.utcnow()
+        if _cache["loaded_at"] and (now - _cache["loaded_at"]).total_seconds() < CACHE_TTL_SECONDS:
+            return _cache["data"]
 
-    if sales.empty or finance.empty:
-        raise HTTPException(status_code=503, detail="No data found -- has seed_data.py been run yet?")
+        customers = db.load_customers()
+        sales = db.load_sales()
+        marketing = db.load_marketing()
+        finance = db.load_finance()
 
-    forecaster = RevenueForecaster()
-    forecaster.fit(finance)
+        if sales.empty or finance.empty:
+            raise HTTPException(status_code=503, detail="No data found -- has seed_data.py been run yet?")
 
-    segmenter = CustomerSegmenter(n_clusters=4)
-    rfm_result = segmenter.fit_predict(sales, customers)
+        forecaster = RevenueForecaster()
+        forecaster.fit(finance)
 
-    churn_scorer = ChurnScorer()
-    churn_result = churn_scorer.fit_predict(rfm_result)
+        segmenter = CustomerSegmenter(n_clusters=4)
+        rfm_result = segmenter.fit_predict(sales, customers)
 
-    avg_customer_value = rfm_result["monetary"].median()
-    roi_summary = compute_marketing_roi(marketing, avg_customer_value)
+        churn_scorer = ChurnScorer()
+        churn_result = churn_scorer.fit_predict(rfm_result)
 
-    anomaly_detector = AnomalyDetector(contamination=0.08)
-    finance_anomalies = anomaly_detector.detect_finance(finance)
-    marketing_anomalies = anomaly_detector.detect_marketing(marketing)
-    sales_anomalies = anomaly_detector.detect_sales(sales, customers, top_n=100)
+        avg_customer_value = rfm_result["monetary"].median()
+        roi_summary = compute_marketing_roi(marketing, avg_customer_value)
 
-    cohort_analyzer = CohortAnalyzer()
-    cohort_table = cohort_analyzer.build_cohort_table(sales, customers)
-    cohort_matrix = cohort_analyzer.retention_matrix(cohort_table)
+        anomaly_detector = AnomalyDetector(contamination=0.08)
+        finance_anomalies = anomaly_detector.detect_finance(finance)
+        marketing_anomalies = anomaly_detector.detect_marketing(marketing)
+        sales_anomalies = anomaly_detector.detect_sales(sales, customers, top_n=100)
 
-    bundle = {
-        "customers": customers,
-        "sales": sales,
-        "marketing": marketing,
-        "finance": finance,
-        "forecaster": forecaster,
-        "segmenter": segmenter,
-        "rfm_result": rfm_result,
-        "churn_scorer": churn_scorer,
-        "churn_result": churn_result,
-        "roi_summary": roi_summary,
-        "finance_anomalies": finance_anomalies,
-        "marketing_anomalies": marketing_anomalies,
-        "sales_anomalies": sales_anomalies,
-        "cohort_table": cohort_table,
-        "cohort_matrix": cohort_matrix,
-    }
-    _cache["data"] = bundle
-    _cache["loaded_at"] = now
-    return bundle
+        cohort_analyzer = CohortAnalyzer()
+        cohort_table = cohort_analyzer.build_cohort_table(sales, customers)
+        cohort_matrix = cohort_analyzer.retention_matrix(cohort_table)
+
+        bundle = {
+            "customers": customers,
+            "sales": sales,
+            "marketing": marketing,
+            "finance": finance,
+            "forecaster": forecaster,
+            "segmenter": segmenter,
+            "rfm_result": rfm_result,
+            "churn_scorer": churn_scorer,
+            "churn_result": churn_result,
+            "roi_summary": roi_summary,
+            "finance_anomalies": finance_anomalies,
+            "marketing_anomalies": marketing_anomalies,
+            "sales_anomalies": sales_anomalies,
+            "cohort_table": cohort_table,
+            "cohort_matrix": cohort_matrix,
+        }
+        _cache["data"] = bundle
+        _cache["loaded_at"] = now
+        return bundle
 
 
 def df_to_records(df: pd.DataFrame) -> list:

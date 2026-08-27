@@ -71,7 +71,7 @@ export default function Layout() {
         .catch(() => !cancelled && setApiState("down"))
     }
     check()
-    const timer = setInterval(check, 30000)
+    const timer = setInterval(check, 60000)
     return () => {
       cancelled = true
       clearInterval(timer)
