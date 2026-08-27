@@ -15,12 +15,13 @@ Then visit http://localhost:8000/docs for interactive API docs.
 import sys
 import os
 import json
+import secrets
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # project root (for analytics.py, data_generator.py)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # api/ folder itself (for db.py)
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
@@ -488,6 +489,55 @@ def delete_employee(employee_id: str):
 @app.get("/api/audit-log")
 def audit_log(table_name: str = Query(None), limit: int = Query(200)):
     df = db.get_audit_log(table_name=table_name, limit=limit)
+    if df.empty:
+        return []
+    return df_to_records(df)
+
+
+# ------------------------------------------------------------------
+# Admin Portal passkey gate + access log
+#
+# WHY THIS IS CHECKED ON THE SERVER, NOT IN THE BROWSER: a passkey
+# compared in React would ship inside the JavaScript bundle, readable by
+# anyone via "view source" -- the gate would be decorative. Checking here
+# means the passkey never leaves the server, and it gives us one place to
+# record every attempt.
+#
+# WHAT THIS IS NOT: one shared passkey is a demo gate, not authentication.
+# It proves someone knew a secret; it does not identify WHO. Per-person
+# login is the outstanding auth work noted above the employee endpoints.
+# ------------------------------------------------------------------
+DEFAULT_ADMIN_PASSKEY = "1234"
+
+
+class AdminLoginRequest(BaseModel):
+    passkey: str
+    device: str | None = None
+
+
+@app.post("/api/admin/login")
+def admin_login(req: AdminLoginRequest, request: Request):
+    expected = os.getenv("ADMIN_PASSKEY", DEFAULT_ADMIN_PASSKEY)
+    # compare_digest instead of == so the comparison takes the same time
+    # whether the first character is wrong or the last one is.
+    granted = secrets.compare_digest(req.passkey, expected)
+
+    client_ip = request.client.host if request.client else None
+    try:
+        db.create_login_log_entry(success=granted, device=req.device, ip_address=client_ip)
+    except Exception:
+        # Never let a logging failure block a legitimate unlock.
+        pass
+
+    if not granted:
+        raise HTTPException(status_code=401, detail="That passkey didn't match. Try again.")
+    return {"granted": True}
+
+
+@app.get("/api/admin/sessions")
+def admin_sessions(limit: int = Query(50)):
+    """Recent Admin Portal unlock attempts, newest first."""
+    df = db.get_login_logs(limit=limit)
     if df.empty:
         return []
     return df_to_records(df)

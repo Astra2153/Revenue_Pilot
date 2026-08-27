@@ -128,3 +128,161 @@
     @apply font-sans;
     }
 }
+
+
+:root {
+  --rp-ink:        #14131A;
+  --rp-ink-soft:   #23212B;
+  --rp-canvas:     #F1EFEE;
+  --rp-paper:      #FFFFFF;
+  --rp-signal:     #D91E48;
+  --rp-signal-dim: #F7D4DD;
+  --rp-bloom:      #EC4899;
+  --rp-blush:      #FDF2F5;
+  --rp-slate:      #78737F;
+  --rp-faint:      #A8A3AF;
+  --rp-hairline:   #E6E2E4;
+ 
+  --rp-shadow: 0 1px 2px rgba(20, 19, 26, 0.04), 0 10px 28px -14px rgba(20, 19, 26, 0.16);
+ 
+  /* Re-point shadcn's theme vars so every Card / Button / Badge /
+     Table / Dialog inherits the palette without being edited. */
+  --background:             var(--rp-canvas);
+  --foreground:             var(--rp-ink);
+  --card:                   var(--rp-paper);
+  --card-foreground:        var(--rp-ink);
+  --popover:                var(--rp-paper);
+  --popover-foreground:     var(--rp-ink);
+  --primary:                var(--rp-signal);
+  --primary-foreground:     #FFFFFF;
+  --secondary:              #EFECEE;
+  --secondary-foreground:   var(--rp-ink);
+  --muted:                  #F4F2F3;
+  --muted-foreground:       var(--rp-slate);
+  --accent:                 var(--rp-blush);
+  --accent-foreground:      var(--rp-ink);
+  --destructive:            #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border:                 var(--rp-hairline);
+  --input:                  var(--rp-hairline);
+  --ring:                   var(--rp-bloom);
+  --radius:                 1rem;
+}
+ 
+body {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--rp-canvas);
+  color: var(--rp-ink);
+  -webkit-font-smoothing: antialiased;
+}
+ 
+h1, h2, h3, .rp-display {
+  font-family: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  letter-spacing: -0.025em;
+}
+ 
+/* Figures line up column to column instead of jittering. Matters most
+   in the finance tables, where a misaligned digit reads as an error. */
+.rp-num, table td, table th { font-variant-numeric: tabular-nums; }
+.rp-mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+ 
+.rp-eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rp-faint);
+}
+ 
+/* Headline figure. The trailing minor unit is dimmed so the eye lands
+   on the magnitude first and the precision second. */
+.rp-stat {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+.rp-stat-minor { color: var(--rp-faint); font-weight: 500; }
+ 
+/* Soft-shadow surface. Applied to shadcn Cards via className. */
+.rp-card {
+  box-shadow: var(--rp-shadow);
+  border-color: transparent !important;
+}
+ 
+/* Near-black feature card: one per screen, carrying the single number
+   that matters most. */
+.rp-card-dark {
+  background-color: var(--rp-ink) !important;
+  color: #FFFFFF !important;
+  box-shadow: var(--rp-shadow);
+  border-color: transparent !important;
+}
+.rp-card-dark .rp-eyebrow { color: #7E7A88; }
+ 
+/* Pill used for deltas, counts and status. */
+.rp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rp-chip--up      { background: #E3F5EA; color: #17724A; }
+.rp-chip--down    { background: var(--rp-signal-dim); color: #9E1237; }
+.rp-chip--neutral { background: #EFECEE; color: var(--rp-slate); }
+.rp-chip--onDark  { background: rgba(255,255,255,0.10); color: #FFFFFF; }
+ 
+/* ---- Sidebar --------------------------------------------------- */
+.rp-sidebar {
+  background-color: #EBE8E7;
+  border-right: 1px solid var(--rp-hairline);
+}
+ 
+.rp-navitem {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #5F5A67;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.rp-navitem:hover { background-color: rgba(255,255,255,0.7); color: var(--rp-ink); }
+.rp-navitem--active {
+  background-color: var(--rp-paper);
+  color: var(--rp-ink);
+  box-shadow: 0 1px 2px rgba(20,19,26,0.06);
+}
+.rp-navitem--active .rp-navicon { color: var(--rp-signal); }
+.rp-navicon { color: var(--rp-faint); flex: none; }
+ 
+/* Equipment-style status lamp. Genuinely useful here: a free-tier
+   backend sleeps after inactivity and takes ~50s to wake, so without
+   this you'd see empty pages and assume the app was broken. */
+.rp-lamp { width: 7px; height: 7px; border-radius: 999px; flex: none; }
+.rp-lamp--live   { background:#22C55E; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+.rp-lamp--waking { background:#F59E0B; box-shadow:0 0 0 3px rgba(245,158,11,.18); animation: rp-pulse 1.4s ease-in-out infinite; }
+.rp-lamp--down   { background:var(--rp-signal); box-shadow:0 0 0 3px rgba(217,30,72,.18); }
+ 
+@keyframes rp-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+ 
+/* Charts sit inside grid children; without min-width:0 a grid item
+   refuses to shrink below its content and the chart pushes the card
+   (and its title) outside the visible area. */
+.rp-chartbox { min-width: 0; overflow: hidden; }
+ 
+.recharts-cartesian-axis-tick text { font-size: 11px; fill: var(--rp-slate); }
+.recharts-default-legend { font-size: 12px !important; }
+ 
+@media (prefers-reduced-motion: reduce) {
+  .rp-lamp--waking { animation: none; }
+  .rp-navitem { transition: none; }
+}

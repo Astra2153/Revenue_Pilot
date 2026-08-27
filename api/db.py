@@ -332,3 +332,48 @@ def get_audit_log(table_name: str = None, limit: int = 200) -> pd.DataFrame:
     else:
         df["employee_name"] = None
     return df
+
+
+# ------------------------------------------------------------------
+# Admin access log (step 18) -- records every attempt to unlock the Admin
+# Portal, successful or not, so an admin can see who has been getting in
+# and from what device.
+#
+# IMPORTANT, AND DELIBERATE: this reuses the existing audit_log table
+# (table_name='admin_session') rather than adding a new table, so no
+# schema migration is needed. record_id is text, so it holds the outcome
+# label rather than a real row id.
+#
+# HONEST SCOPE NOTE: the Admin Portal is gated by ONE SHARED passkey.
+# That is a demo gate, not authentication -- it identifies nobody, so
+# these entries record "a browser that knew the passkey", not "which
+# person". Real per-user attribution needs the auth layer that is still
+# outstanding (see the note above the employee endpoints in api.py).
+# ------------------------------------------------------------------
+def create_login_log_entry(success: bool, device: str = None, ip_address: str = None) -> dict:
+    client = get_client(use_service_role=True)
+    row = {
+        "employee_id": None,
+        "table_name": "admin_session",
+        "record_id": "granted" if success else "denied",
+        "action": "login_success" if success else "login_failed",
+        "old_data": None,
+        "new_data": {"device": device, "ip_address": ip_address},
+    }
+    result = client.table("audit_log").insert(row).execute()
+    return result.data[0] if result.data else {}
+
+
+def get_login_logs(limit: int = 50) -> pd.DataFrame:
+    """Most recent Admin Portal unlock attempts, newest first."""
+    client = get_client(use_service_role=True)
+    rows = (
+        client.table("audit_log")
+        .select("*")
+        .eq("table_name", "admin_session")
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+    return pd.DataFrame(rows)

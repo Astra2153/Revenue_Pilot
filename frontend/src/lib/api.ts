@@ -280,3 +280,82 @@ export function askQuery(question: string, division: string) {
 export function getQuerySchema(division: string) {
   return apiFetch<QuerySchemaResponse>(`/api/query/schema?division=${division}`)
 }
+
+export interface FinanceRow {
+  month: string
+  revenue: number
+  marketing_spend: number
+  cogs: number
+  gross_profit: number
+  other_opex: number
+  operating_profit: number
+  cash_flow: number
+}
+
+export function getFinanceRaw() {
+  return apiFetch<{ rows: FinanceRow[] }>("/api/finance/raw")
+}
+
+export interface SalesRow {
+  transaction_id: string
+  customer_id: string
+  segment: string
+  region: string
+  date: string
+  product_category: string
+  sales_channel: string
+  revenue: number
+  units_sold: number
+}
+
+export function getSalesRaw() {
+  return apiFetch<{ rows: SalesRow[] }>("/api/sales/raw?limit=5000")
+}
+
+export interface RFMCustomer {
+  customer_id: string
+  recency_days: number
+  frequency: number
+  monetary: number
+  segment_label: string
+  segment: string
+  region: string
+}
+
+export function getSegments() {
+  return apiFetch<{ customers: RFMCustomer[] }>("/api/segments")
+}
+
+export interface SegmentSummaryRow {
+  segment_label: string
+  customers: number
+  avg_recency_days: number
+  avg_frequency: number
+  avg_monetary: number
+  total_monetary: number
+}
+
+export function getSegmentsSummary() {
+  return apiFetch<{ summary: SegmentSummaryRow[] }>("/api/segments/summary")
+}
+
+export interface AdminSessionEntry {
+  id: string
+  table_name: string
+  record_id: string
+  action: string
+  new_data: { device?: string | null; ip_address?: string | null } | null
+  created_at: string
+}
+
+/** Sends the passkey to the backend to be checked there, never in the browser. */
+export function adminLogin(passkey: string, device: string) {
+  return apiFetch<{ granted: boolean }>("/api/admin/login", {
+    method: "POST",
+    body: JSON.stringify({ passkey, device }),
+  })
+}
+
+export function getAdminSessions(limit = 50) {
+  return apiFetch<AdminSessionEntry[]>(`/api/admin/sessions?limit=${limit}`)
+}
