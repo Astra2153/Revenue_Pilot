@@ -9,6 +9,7 @@ import Chatbot from "@/pages/Chatbot"
 import AuditLog from "@/pages/AuditLog"
 import FinancePage from "@/pages/FinancePage"
 import CustomerIntelligence from "@/pages/CustomerIntelligence"
+import ReportsPage from "@/pages/ReportsPage"
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/marketing" element={<MarketingFunnel />} />
         <Route path="/simulator" element={<ScenarioSimulator />} />
         <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/audit-log" element={<AuditLog />} />
       </Route>
     </Routes>

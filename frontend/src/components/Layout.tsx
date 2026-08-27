@@ -10,6 +10,7 @@ import {
   Shield,
   MessageSquare,
   ScrollText,
+  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getHealth } from "@/lib/api"
@@ -42,6 +43,7 @@ const NAV_GROUPS = [
     heading: "Tools",
     items: [
       { path: "/chatbot", label: "Chatbot", Icon: MessageSquare },
+      { path: "/reports", label: "Reports", Icon: Mail },
       { path: "/audit-log", label: "Audit Log", Icon: ScrollText },
     ],
   },

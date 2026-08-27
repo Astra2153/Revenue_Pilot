@@ -359,3 +359,30 @@ export function adminLogin(passkey: string, device: string) {
 export function getAdminSessions(limit = 50) {
   return apiFetch<AdminSessionEntry[]>(`/api/admin/sessions?limit=${limit}`)
 }
+
+export interface ReportPreviewResponse {
+  report_data: Record<string, unknown>
+  narrative: string
+  causal_narrative: string
+  html: string
+}
+
+export interface ReportSendResponse {
+  narrative: string
+  send_result: Record<string, unknown>
+}
+
+export function getReportPreview() {
+  return apiFetch<ReportPreviewResponse>("/api/reports/monthly/preview")
+}
+
+export function sendReport(toEmails: string[]) {
+  return apiFetch<ReportSendResponse>("/api/reports/monthly/send", {
+    method: "POST",
+    body: JSON.stringify({ to_emails: toEmails }),
+  })
+}
+
+export function sendReportToAllAdmins() {
+  return apiFetch<Record<string, unknown>>("/api/reports/monthly/send-all", { method: "POST" })
+}
